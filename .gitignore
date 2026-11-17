@@ -1,0 +1,32 @@
+# ============================================================================
+# Git Ignore - Public Portfolio Deployment Configuration
+# All local Admin CMS & Server files are kept strictly on your local machine.
+# Only the public portfolio and images.json will be tracked and sent to GitHub.
+# ============================================================================
+
+# Local Admin CMS & Server (Kept strictly LOCAL)
+server.js
+admin.html
+admin.css
+admin.js
+setup-admin.js
+*.bat
+
+# Node.js dependencies & configurations
+package.json
+package-lock.json
+node_modules/
+
+# Environment Variables & Credentials
+.env
+.env.*
+
+# Backups & Temporary files
+*.bak
+*.tmp
+
+# Operating System & IDE metadata
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
