@@ -16,12 +16,11 @@
     lightboxIndex: 0,
     theme: "dark",
     galleryReady: false,
-    enterRequested: false,
-    swarmStarted: false,
+    galleryRebuildStarted: false,
     carousels: []
   };
 
-  const SWARM_AUTOSTART = true;
+  const GALLERY_REBUILD_AUTOSTART = true;
 
   // DOM Elements Cache
   const DOM = {
@@ -372,8 +371,8 @@
     if (state.filteredImages.length === 0) {
       DOM.galleryStatus.textContent = `No images found for category "${state.currentCategory}".`;
       state.galleryReady = true;
-      notifySwarmOfGallery();
-      tryStartSwarm();
+      notifyGalleryRebuild();
+      tryStartGalleryRebuild();
       return;
     }
 
@@ -393,32 +392,31 @@
     }
 
     state.galleryReady = true;
-    notifySwarmOfGallery();
-    tryStartSwarm();
+    notifyGalleryRebuild();
+    tryStartGalleryRebuild();
   }
 
   // -------------------------------------------------------------------------
-  // Swarm rebuild helpers
+  // Gallery build / erase effect
   // -------------------------------------------------------------------------
-  function notifySwarmOfGallery() {
-    const swarm = window.__swarmRebuild;
-    if (!swarm || !swarm.app || typeof swarm.refresh !== "function") return;
-    swarm.refresh(DOM.galleryGrid);
+  function notifyGalleryRebuild() {
+    const rebuild = window.__galleryRebuild;
+    if (!rebuild || !rebuild.app || typeof rebuild.refresh !== "function") return;
+    rebuild.refresh(DOM.galleryGrid);
   }
 
-  function tryStartSwarm() {
-    if (!SWARM_AUTOSTART || !state.enterRequested || !state.galleryReady) return;
-    const swarm = window.__swarmRebuild;
-    if (!swarm || typeof swarm.start !== "function" || swarm.app || state.swarmStarted) return;
+  function tryStartGalleryRebuild() {
+    if (!GALLERY_REBUILD_AUTOSTART || !state.galleryReady) return;
+    const rebuild = window.__galleryRebuild;
+    if (!rebuild || typeof rebuild.start !== "function" || rebuild.app || state.galleryRebuildStarted) return;
 
-    state.swarmStarted = true;
-    window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+    state.galleryRebuildStarted = true;
     setTimeout(() => {
       try {
-        swarm.start();
+        rebuild.start();
       } catch (err) {
-        state.swarmStarted = false;
-        console.warn("Swarm rebuild failed to start.", err);
+        state.galleryRebuildStarted = false;
+        console.warn("Gallery build/erase failed to start.", err);
       }
     }, 80);
   }
@@ -578,100 +576,11 @@
   }
 
   // -------------------------------------------------------------------------
-  // Loading / START screen (audio unlock + swarm handoff)
-  // -------------------------------------------------------------------------
-  function initLoadingScreen() {
-    const loadingScreenEl = document.getElementById("loadingScreen");
-    const loadingBarFillEl = document.getElementById("loadingBarFill");
-    const loadingPercentEl = document.getElementById("loadingPercent");
-    const loadingStatusTextEl = document.getElementById("loadingStatusText");
-    const loadingStartBtnEl = document.getElementById("loadingStartBtn");
-    const loadingHintEl = document.getElementById("loadingHint");
-
-    if (!loadingScreenEl) {
-      state.enterRequested = true;
-      tryStartSwarm();
-      return;
-    }
-
-    let loadProgressVal = 0;
-    let loadProgressTimer = null;
-    let loadingHidden = false;
-
-    function setLoadProgress(p) {
-      loadProgressVal = Math.max(loadProgressVal, Math.min(100, p));
-      if (loadingBarFillEl) loadingBarFillEl.style.width = `${loadProgressVal}%`;
-      if (loadingPercentEl) loadingPercentEl.textContent = `${Math.round(loadProgressVal)}%`;
-    }
-
-    function startLoadProgress() {
-      loadProgressTimer = setInterval(() => {
-        let next = loadProgressVal + (Math.random() * 6 + 2);
-        if (next > 92) next = 92;
-        setLoadProgress(next);
-      }, 120);
-    }
-
-    function enterSite() {
-      if (loadingHidden) return;
-      loadingHidden = true;
-      if (loadProgressTimer) {
-        clearInterval(loadProgressTimer);
-        loadProgressTimer = null;
-      }
-      setLoadProgress(100);
-      if (loadingStatusTextEl) loadingStatusTextEl.textContent = "SYSTEM READY";
-
-      try {
-        if (window.__swarmRebuild && typeof window.__swarmRebuild.unlockAudio === "function") {
-          window.__swarmRebuild.unlockAudio();
-        }
-      } catch (err) { /* ignore */ }
-
-      state.enterRequested = true;
-      tryStartSwarm();
-
-      setTimeout(() => {
-        loadingScreenEl.classList.add("is-hidden");
-        loadingScreenEl.setAttribute("aria-busy", "false");
-      }, 260);
-    }
-
-    function markReady() {
-      if (loadProgressTimer) {
-        clearInterval(loadProgressTimer);
-        loadProgressTimer = null;
-      }
-      setLoadProgress(100);
-      if (loadingStatusTextEl) loadingStatusTextEl.textContent = "READY — CLICK TO ENTER";
-      if (loadingHintEl) loadingHintEl.textContent = "Click START to enter the site";
-      if (loadingStartBtnEl) {
-        loadingStartBtnEl.classList.add("is-ready");
-        loadingStartBtnEl.disabled = false;
-      }
-    }
-
-    startLoadProgress();
-    if (loadingStartBtnEl) {
-      loadingStartBtnEl.addEventListener("click", enterSite);
-    }
-
-    const loadFallbackTimer = setTimeout(enterSite, 12000);
-
-    window.addEventListener("load", () => {
-      clearTimeout(loadFallbackTimer);
-      setTimeout(markReady, 500);
-      setTimeout(enterSite, 15000);
-    });
-  }
-
-  // -------------------------------------------------------------------------
   // Initialization
   // -------------------------------------------------------------------------
   document.addEventListener("DOMContentLoaded", () => {
     initTheme();
     initLightboxEvents();
-    initLoadingScreen();
     loadImages();
   });
 })();
